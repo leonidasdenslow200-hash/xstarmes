@@ -1,65 +1,44 @@
--- VAPORWAVE DEV TOOLS CLIENT (fixed)
--- Place this LocalScript in StarterPlayerScripts
+-- VAPORWAVE DEV CONSOLE WITH PASSWORD + BIG CMD LIST
+-- LocalScript in StarterPlayerScripts
 
 local Players = game:GetService("Players")
-local RS = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+local RS = game:GetService("RunService")
 local TS = game:GetService("TweenService")
-local CollectionService = game:GetService("CollectionService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local LP = Players.LocalPlayer
 local PG = LP:WaitForChild("PlayerGui")
 
--- Try to find the folder but don't block forever
-local folder = ReplicatedStorage:FindFirstChild("VaporwaveDevTools")
-if not folder then
-    -- create a local placeholder so client code doesn't hang
-    folder = Instance.new("Folder")
-    folder.Name = "VaporwaveDevTools"
-    folder.Parent = ReplicatedStorage
-end
-
--- Themes
-local Themes = {
-    vaporwave = {
-        BG = Color3.fromRGB(20, 10, 40),
-        Accent = Color3.fromRGB(255, 120, 200),
-        Accent2 = Color3.fromRGB(120, 200, 255),
-        Text = Color3.new(1,1,1)
-    },
-    neon = {
-        BG = Color3.fromRGB(10, 10, 25),
-        Accent = Color3.fromRGB(0, 255, 200),
-        Accent2 = Color3.fromRGB(120, 80, 255),
-        Text = Color3.new(1,1,1)
-    },
-    dark = {
-        BG = Color3.fromRGB(15, 15, 15),
-        Accent = Color3.fromRGB(255, 140, 0),
-        Accent2 = Color3.fromRGB(255, 80, 80),
-        Text = Color3.new(1,1,1)
-    }
+----------------------------------------------------------------
+-- THEME
+----------------------------------------------------------------
+local theme = {
+    BG = Color3.fromRGB(20, 10, 40),
+    Accent = Color3.fromRGB(255, 120, 200),
+    Accent2 = Color3.fromRGB(120, 200, 255),
+    Text = Color3.new(1,1,1)
 }
 
-local themeName = "vaporwave"
-local theme = Themes[themeName]
-
--- GUI root
+----------------------------------------------------------------
+-- ROOT GUI
+----------------------------------------------------------------
 local gui = Instance.new("ScreenGui")
 gui.Name = "VaporwaveConsole"
 gui.ResetOnSpawn = false
 gui.Parent = PG
 
--- Small floating console (center-right)
+----------------------------------------------------------------
+-- CONSOLE (SMALL, FLOATING, HIDDEN UNTIL UNLOCK)
+----------------------------------------------------------------
 local console = Instance.new("Frame")
-console.Size = UDim2.fromScale(0.22, 0.22)
+console.Size = UDim2.fromScale(0.24, 0.24)
 console.Position = UDim2.fromScale(0.72, 0.38)
 console.BackgroundColor3 = theme.BG
 console.BackgroundTransparency = 0.08
 console.Active = true
 console.Draggable = true
+console.Visible = false
 console.Parent = gui
 Instance.new("UICorner", console).CornerRadius = UDim.new(0, 12)
 local stroke = Instance.new("UIStroke", console)
@@ -87,47 +66,19 @@ title.TextColor3 = theme.Text
 title.Parent = console
 
 local status = Instance.new("TextLabel")
-status.Size = UDim2.fromScale(0.96, 0.18)
+status.Size = UDim2.fromScale(0.96, 0.2)
 status.Position = UDim2.fromScale(0.02, 0.28)
 status.BackgroundTransparency = 1
-status.Text = "Type !help in chat."
+status.Text = "Locked. Enter password."
 status.Font = Enum.Font.Gotham
 status.TextScaled = true
 status.TextColor3 = theme.Text
 status.TextXAlignment = Enum.TextXAlignment.Left
 status.Parent = console
 
--- Scrollable help list
-local helpFrame = Instance.new("ScrollingFrame")
-helpFrame.Size = UDim2.fromScale(0.96, 0.54)
-helpFrame.Position = UDim2.fromScale(0.02, 0.48)
-helpFrame.BackgroundColor3 = theme.BG
-helpFrame.BackgroundTransparency = 0.3
-helpFrame.ScrollBarThickness = 6
-helpFrame.CanvasSize = UDim2.new(0,0,0,0)
-helpFrame.Parent = console
-Instance.new("UICorner", helpFrame).CornerRadius = UDim.new(0, 8)
-
-local helpListLayout = Instance.new("UIListLayout")
-helpListLayout.Parent = helpFrame
-helpListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-helpListLayout.Padding = UDim.new(0,6)
-
--- Helper to create a line in help
-local function addHelpLine(text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -12, 0, 28)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.Font = Enum.Font.Code
-    lbl.TextSize = 16
-    lbl.TextColor3 = theme.Text
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Parent = helpFrame
-    return lbl
-end
-
--- Toast function
+----------------------------------------------------------------
+-- TOAST
+----------------------------------------------------------------
 local function toast(msg)
     local tGui = Instance.new("ScreenGui")
     tGui.ResetOnSpawn = false
@@ -160,7 +111,107 @@ local function toast(msg)
     end)
 end
 
--- Movement helpers
+----------------------------------------------------------------
+-- KEYPAD (CENTER)
+----------------------------------------------------------------
+local unlocked = false
+local PASSWORD = "6767"
+local currentInput = ""
+
+local keypadFrame = Instance.new("Frame")
+keypadFrame.Size = UDim2.fromScale(0.3, 0.4)
+keypadFrame.Position = UDim2.fromScale(0.35, 0.3)
+keypadFrame.BackgroundColor3 = theme.BG
+keypadFrame.BackgroundTransparency = 0.05
+keypadFrame.Parent = gui
+Instance.new("UICorner", keypadFrame).CornerRadius = UDim.new(0, 12)
+local kpStroke = Instance.new("UIStroke", keypadFrame)
+kpStroke.Thickness = 2
+kpStroke.Color = theme.Accent2
+
+local kpTitle = Instance.new("TextLabel")
+kpTitle.Size = UDim2.fromScale(1, 0.2)
+kpTitle.BackgroundTransparency = 1
+kpTitle.Text = "ENTER PASSWORD"
+kpTitle.Font = Enum.Font.GothamBold
+kpTitle.TextScaled = true
+kpTitle.TextColor3 = theme.Text
+kpTitle.Parent = keypadFrame
+
+local kpDisplay = Instance.new("TextLabel")
+kpDisplay.Size = UDim2.fromScale(0.9, 0.15)
+kpDisplay.Position = UDim2.fromScale(0.05, 0.2)
+kpDisplay.BackgroundTransparency = 0.3
+kpDisplay.BackgroundColor3 = theme.BG
+kpDisplay.Font = Enum.Font.Code
+kpDisplay.TextScaled = true
+kpDisplay.TextColor3 = theme.Text
+kpDisplay.Text = ""
+kpDisplay.Parent = keypadFrame
+Instance.new("UICorner", kpDisplay).CornerRadius = UDim.new(0, 8)
+
+local grid = Instance.new("Frame")
+grid.Size = UDim2.fromScale(0.9, 0.55)
+grid.Position = UDim2.fromScale(0.05, 0.4)
+grid.BackgroundTransparency = 1
+grid.Parent = keypadFrame
+
+local uiGrid = Instance.new("UIGridLayout")
+uiGrid.CellSize = UDim2.new(0.3, 0, 0.3, 0)
+uiGrid.CellPadding = UDim2.new(0.05, 0, 0.05, 0)
+uiGrid.FillDirectionMaxCells = 3
+uiGrid.Parent = grid
+
+local function makeKey(text, callback)
+    local btn = Instance.new("TextButton")
+    btn.BackgroundColor3 = theme.BG
+    btn.BackgroundTransparency = 0.2
+    btn.Text = text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextScaled = true
+    btn.TextColor3 = theme.Text
+    btn.Parent = grid
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    btn.MouseButton1Click:Connect(callback)
+end
+
+for i = 1, 9 do
+    makeKey(tostring(i), function()
+        if unlocked then return end
+        currentInput ..= tostring(i)
+        kpDisplay.Text = currentInput
+    end)
+end
+
+makeKey("C", function()
+    if unlocked then return end
+    currentInput = ""
+    kpDisplay.Text = ""
+end)
+
+makeKey("0", function()
+    if unlocked then return end
+    currentInput ..= "0"
+    kpDisplay.Text = currentInput
+end)
+
+makeKey("OK", function()
+    if unlocked then return end
+    if currentInput == PASSWORD then
+        unlocked = true
+        console.Visible = true
+        keypadFrame:Destroy()
+        status.Text = "Password correct. Console unlocked. Type !cmds to view all commands."
+        toast("Password correct. Console unlocked. Type !cmds to view all commands.")
+    else
+        keypadFrame:Destroy()
+        toast("Wrong password. Access closed.")
+    end
+end)
+
+----------------------------------------------------------------
+-- MOVEMENT HELPERS
+----------------------------------------------------------------
 local function getHumanoid()
     local char = LP.Character
     return char and char:FindFirstChildOfClass("Humanoid")
@@ -170,10 +221,6 @@ local function getHRP()
     return char and char:FindFirstChild("HumanoidRootPart")
 end
 
-local speedDefault = 16
-local jumpDefault = 50
-
--- Fly (classic): WASD + Space up + LeftControl down
 local flying = false
 local flySpeed = 60
 local bv, bg
@@ -207,7 +254,6 @@ local function stopFly()
     toast("Fly OFF")
 end
 
--- Fly control loop
 RS.RenderStepped:Connect(function()
     if not flying then return end
     local hrp = getHRP()
@@ -226,159 +272,119 @@ RS.RenderStepped:Connect(function()
         move = Vector3.new(0,0,0)
     end
     if bv then
-        bv.Velocity = Vector3.new(move.X, move.Y, move.Z)
+        bv.Velocity = move
     end
     if bg and Workspace.CurrentCamera then
         bg.CFrame = Workspace.CurrentCamera.CFrame
     end
 end)
 
--- ESP (NPCs + Objects)
-local espFolder = Instance.new("Folder", gui)
-espFolder.Name = "DevESPFolder"
+----------------------------------------------------------------
+-- BIG COMMAND LIST UI (FOR !cmds)
+----------------------------------------------------------------
+local cmdsGui = Instance.new("ScreenGui")
+cmdsGui.Name = "CmdsListGui"
+cmdsGui.ResetOnSpawn = false
+cmdsGui.Enabled = false
+cmdsGui.Parent = PG
 
-local espItems = {} -- map Adornee (BasePart) -> BillboardGui
+local cmdsFrame = Instance.new("Frame")
+cmdsFrame.Size = UDim2.fromScale(0.5, 0.6)
+cmdsFrame.Position = UDim2.fromScale(0.25, 0.2)
+cmdsFrame.BackgroundColor3 = theme.BG
+cmdsFrame.BackgroundTransparency = 0.05
+cmdsFrame.Parent = cmdsGui
+Instance.new("UICorner", cmdsFrame).CornerRadius = UDim.new(0, 12)
+local cmdsStroke = Instance.new("UIStroke", cmdsFrame)
+cmdsStroke.Thickness = 2
+cmdsStroke.Color = theme.Accent2
 
-local function makeAdornment(target, labelText)
-    if not target or not target:IsA("BasePart") then return nil end
-    local ador = Instance.new("BillboardGui")
-    ador.Name = "DevESP_Adornment"
-    ador.Adornee = target
-    ador.Size = UDim2.new(0, 140, 0, 40)
-    ador.StudsOffset = Vector3.new(0, 2, 0)
-    ador.AlwaysOnTop = true
-    ador.Parent = espFolder
+local cmdsTitle = Instance.new("TextLabel")
+cmdsTitle.Size = UDim2.fromScale(1, 0.12)
+cmdsTitle.BackgroundTransparency = 1
+cmdsTitle.Text = "COMMANDS"
+cmdsTitle.Font = Enum.Font.GothamBold
+cmdsTitle.TextScaled = true
+cmdsTitle.TextColor3 = theme.Text
+cmdsTitle.Parent = cmdsFrame
 
-    local frame = Instance.new("Frame", ador)
-    frame.Size = UDim2.new(1,0,1,0)
-    frame.BackgroundTransparency = 0.4
-    frame.BackgroundColor3 = theme.BG
-    frame.BorderSizePixel = 0
-    local txt = Instance.new("TextLabel", frame)
-    txt.Size = UDim2.new(1, -8, 1, -8)
-    txt.Position = UDim2.new(0,4,0,4)
-    txt.BackgroundTransparency = 1
-    txt.Text = labelText or "ESP"
-    txt.Font = Enum.Font.Gotham
-    txt.TextSize = 14
-    txt.TextColor3 = theme.Accent2
-    txt.TextStrokeTransparency = 0.6
-    return ador
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.fromScale(0.12, 0.12)
+closeBtn.Position = UDim2.fromScale(0.86, 0)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Text = "X"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextScaled = true
+closeBtn.TextColor3 = theme.Accent2
+closeBtn.Parent = cmdsFrame
+closeBtn.MouseButton1Click:Connect(function()
+    cmdsGui.Enabled = false
+end)
+
+local cmdsScroll = Instance.new("ScrollingFrame")
+cmdsScroll.Size = UDim2.fromScale(0.96, 0.82)
+cmdsScroll.Position = UDim2.fromScale(0.02, 0.16)
+cmdsScroll.BackgroundColor3 = theme.BG
+cmdsScroll.BackgroundTransparency = 0.2
+cmdsScroll.ScrollBarThickness = 6
+cmdsScroll.CanvasSize = UDim2.new(0,0,0,0)
+cmdsScroll.Parent = cmdsFrame
+Instance.new("UICorner", cmdsScroll).CornerRadius = UDim.new(0, 8)
+
+local cmdsLayout = Instance.new("UIListLayout")
+cmdsLayout.Parent = cmdsScroll
+cmdsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+cmdsLayout.Padding = UDim.new(0, 4)
+
+local function addCmdLine(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -10, 0, 24)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.Font = Enum.Font.Code
+    lbl.TextSize = 16
+    lbl.TextColor3 = theme.Text
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = cmdsScroll
 end
 
-local function addESPForInstance(inst, label)
-    if not inst then return end
-    local target = nil
-    if inst:IsA("Model") then
-        target = inst.PrimaryPart or inst:FindFirstChild("HumanoidRootPart") or inst:FindFirstChildWhichIsA("BasePart")
-    elseif inst:IsA("BasePart") then
-        target = inst
+local function refreshCmdsList(commands)
+    for _, c in ipairs(cmdsScroll:GetChildren()) do
+        if c:IsA("TextLabel") then c:Destroy() end
     end
-    if not target then return end
-    if espItems[target] then return end
-    local ador = makeAdornment(target, label)
-    if ador then espItems[target] = ador end
-end
-
-local function removeESPForInstance(inst)
-    if not inst then return end
-    local target = inst.PrimaryPart or inst:FindFirstChild("HumanoidRootPart") or inst:FindFirstChildWhichIsA("BasePart") or inst
-    local a = espItems[target]
-    if a then a:Destroy() espItems[target] = nil end
-end
-
--- Tag handlers
-local function onNPCAdded(inst) addESPForInstance(inst, inst.Name or "NPC") end
-local function onNPCRemoved(inst) removeESPForInstance(inst) end
-local function onObjectAdded(inst) addESPForInstance(inst, inst.Name or "Object") end
-local function onObjectRemoved(inst) removeESPForInstance(inst) end
-
-for _, v in ipairs(CollectionService:GetTagged("DevESP_NPC")) do onNPCAdded(v) end
-for _, v in ipairs(CollectionService:GetTagged("DevESP_Object")) do onObjectAdded(v) end
-
-CollectionService:GetInstanceAddedSignal("DevESP_NPC"):Connect(onNPCAdded)
-CollectionService:GetInstanceRemovedSignal("DevESP_NPC"):Connect(onNPCRemoved)
-CollectionService:GetInstanceAddedSignal("DevESP_Object"):Connect(onObjectAdded)
-CollectionService:GetInstanceRemovedSignal("DevESP_Object"):Connect(onObjectRemoved)
-
--- Target-assist (NPC only)
-local function targetAssist()
-    local hrp = getHRP()
-    if not hrp then status.Text = "No character."; return end
-    local myPos = hrp.Position
-    local nearest, ndist = nil, math.huge
-    for adornee, adorn in pairs(espItems) do
-        local parent = adornee.Parent
-        if parent and parent:FindFirstChildOfClass("Humanoid") then
-            local pos = adornee.Position
-            local d = (pos - myPos).Magnitude
-            if d < ndist then
-                nearest = adornee
-                ndist = d
-            end
-        end
+    local keys = {}
+    for k in pairs(commands) do table.insert(keys, k) end
+    table.sort(keys)
+    for _, k in ipairs(keys) do
+        local v = commands[k]
+        addCmdLine("!"..k.." - "..v.desc)
     end
-    if nearest and ndist < 200 then
-        local targetCFrame = CFrame.new(Workspace.CurrentCamera.CFrame.Position, nearest.Position)
-        local t = 0
-        local dur = 0.35
-        local start = Workspace.CurrentCamera.CFrame
-        while t < dur do
-            local dt = RS.RenderStepped:Wait()
-            t = t + dt
-            local a = math.clamp(t/dur, 0, 1)
-            Workspace.CurrentCamera.CFrame = start:Lerp(targetCFrame, a)
-        end
-        status.Text = "Targeted NPC."
-        toast("Targeted NPC")
-    else
-        status.Text = "No NPC in range."
-    end
+    cmdsScroll.CanvasSize = UDim2.new(0,0,0,#keys * 26 + 20)
 end
 
--- Command system
+----------------------------------------------------------------
+-- COMMAND SYSTEM
+----------------------------------------------------------------
 local commands = {}
 
 local function registerCommand(name, desc, func)
     commands[name] = {desc = desc, fn = func}
 end
 
--- Populate help list function (robust)
-local function populateHelp()
-    -- remove all non-layout children
-    for _, child in ipairs(helpFrame:GetChildren()) do
-        if not child:IsA("UIListLayout") then child:Destroy() end
-    end
-    -- header
-    addHelpLine("Commands:")
-    -- stable ordering
-    local keys = {}
-    for k in pairs(commands) do table.insert(keys, k) end
-    table.sort(keys)
-    for _, k in ipairs(keys) do
-        local v = commands[k]
-        addHelpLine("  !"..k.."  -  "..v.desc)
-    end
-    -- player list
-    addHelpLine("Players in game:")
-    for _, p in ipairs(Players:GetPlayers()) do
-        addHelpLine("  "..p.Name)
-    end
-    -- compute canvas size based on number of TextLabel children
-    local labelCount = 0
-    for _, child in ipairs(helpFrame:GetChildren()) do
-        if child:IsA("TextLabel") then labelCount = labelCount + 1 end
-    end
-    helpFrame.CanvasSize = UDim2.new(0,0,0, math.max(1, labelCount) * 34)
-end
-
--- Register commands
-registerCommand("help", "Show command list.", function(args)
-    populateHelp()
-    status.Text = "Commands listed."
+----------------------------------------------------------------
+-- REAL COMMANDS
+----------------------------------------------------------------
+registerCommand("help", "Short help in console.", function(args)
+    status.Text = "Use !cmds to see full list."
 end)
 
-registerCommand("speed", "Set WalkSpeed. Usage: !speed <number>", function(args)
+registerCommand("cmds", "Open big command list UI.", function(args)
+    refreshCmdsList(commands)
+    cmdsGui.Enabled = true
+    status.Text = "Command list opened."
+end)
+
+registerCommand("speed", "Set WalkSpeed. !speed <number>", function(args)
     local hum = getHumanoid()
     if not hum then status.Text = "No humanoid."; return end
     local n = tonumber(args[1])
@@ -387,7 +393,7 @@ registerCommand("speed", "Set WalkSpeed. Usage: !speed <number>", function(args)
     status.Text = "Speed set to "..n.."."
 end)
 
-registerCommand("jump", "Set JumpPower. Usage: !jump <number>", function(args)
+registerCommand("jump", "Set JumpPower. !jump <number>", function(args)
     local hum = getHumanoid()
     if not hum then status.Text = "No humanoid."; return end
     local n = tonumber(args[1])
@@ -396,7 +402,7 @@ registerCommand("jump", "Set JumpPower. Usage: !jump <number>", function(args)
     status.Text = "JumpPower set to "..n.."."
 end)
 
-registerCommand("fly", "Toggle classic fly (WASD + Space up + Ctrl down). Usage: !fly", function(args)
+registerCommand("fly", "Toggle classic fly.", function(args)
     if flying then stopFly() else startFly() end
 end)
 
@@ -415,26 +421,25 @@ registerCommand("flash", "Screen flash.", function(args)
 end)
 
 registerCommand("shake", "Camera shake.", function(args)
-    if workspace.CurrentCamera then
-        local cam = workspace.CurrentCamera
-        local orig = cam.CFrame
-        local t = 0
-        local dur = 0.5
-        while t < dur do
-            t += RS.RenderStepped:Wait()
-            local off = CFrame.new(
-                math.random(-2,2)/50,
-                math.random(-2,2)/50,
-                0
-            )
-            cam.CFrame = orig * off
-        end
-        cam.CFrame = orig
+    local cam = Workspace.CurrentCamera
+    if not cam then return end
+    local orig = cam.CFrame
+    local t = 0
+    local dur = 0.5
+    while t < dur do
+        t += RS.RenderStepped:Wait()
+        local off = CFrame.new(
+            math.random(-2,2)/50,
+            math.random(-2,2)/50,
+            0
+        )
+        cam.CFrame = orig * off
     end
+    cam.CFrame = orig
     status.Text = "Shake."
 end)
 
-registerCommand("confetti", "Confetti burst on your character.", function(args)
+registerCommand("confetti", "Confetti on your character.", function(args)
     local hrp = getHRP()
     if not hrp then status.Text = "No HRP."; return end
     local p = Instance.new("ParticleEmitter")
@@ -448,27 +453,7 @@ registerCommand("confetti", "Confetti burst on your character.", function(args)
     status.Text = "Confetti."
 end)
 
-registerCommand("theme", "Change theme. Usage: !theme vaporwave|neon|dark", function(args)
-    local name = args[1] and args[1]:lower()
-    if not name or not Themes[name] then
-        status.Text = "Themes: vaporwave, neon, dark."
-        return
-    end
-    themeName = name
-    theme = Themes[name]
-    -- apply theme colors
-    console.BackgroundColor3 = theme.BG
-    stroke.Color = theme.Accent2
-    title.TextColor3 = theme.Text
-    status.TextColor3 = theme.Text
-    for _, child in ipairs(helpFrame:GetChildren()) do
-        if child:IsA("TextLabel") then child.TextColor3 = theme.Text end
-    end
-    status.Text = "Theme: "..name.."."
-    toast("Theme: "..name)
-end)
-
-registerCommand("notify", "Show toast notification. Usage: !notify <text>", function(args)
+registerCommand("notify", "Toast message. !notify <text>", function(args)
     if #args == 0 then
         status.Text = "Usage: !notify hello"
         return
@@ -478,14 +463,13 @@ registerCommand("notify", "Show toast notification. Usage: !notify <text>", func
     status.Text = "Notified."
 end)
 
--- Save point: store as two attributes (Vector3 pos, Vector3 lookVector) to avoid loadstring
 registerCommand("setpoint", "Save current position.", function(args)
     local hrp = getHRP()
     if not hrp then status.Text = "No HRP."; return end
     local pos = hrp.Position
     local look = Workspace.CurrentCamera and Workspace.CurrentCamera.CFrame.LookVector or Vector3.new(0,0,1)
-    LP:SetAttribute("VaporwaveSavedPointPos", pos)
-    LP:SetAttribute("VaporwaveSavedPointLook", look)
+    LP:SetAttribute("VW_Pos", pos)
+    LP:SetAttribute("VW_Look", look)
     status.Text = "Point saved."
     toast("Point saved.")
 end)
@@ -493,23 +477,18 @@ end)
 registerCommand("tp", "Teleport to saved point.", function(args)
     local hrp = getHRP()
     if not hrp then status.Text = "No HRP."; return end
-    local pos = LP:GetAttribute("VaporwaveSavedPointPos")
-    local look = LP:GetAttribute("VaporwaveSavedPointLook")
+    local pos = LP:GetAttribute("VW_Pos")
+    local look = LP:GetAttribute("VW_Look")
     if not pos then status.Text = "No saved point."; return end
-    -- reconstruct CFrame using look vector if available
-    local targetCFrame
+    local cf
     if look and typeof(look) == "Vector3" then
-        targetCFrame = CFrame.new(pos, pos + look)
+        cf = CFrame.new(pos, pos + look)
     else
-        targetCFrame = CFrame.new(pos)
+        cf = CFrame.new(pos)
     end
-    hrp.CFrame = targetCFrame
+    hrp.CFrame = cf
     status.Text = "Teleported."
     toast("Teleported.")
-end)
-
-registerCommand("assist", "Target-assist to nearest NPC (uses DevESP_NPC tag).", function(args)
-    targetAssist()
 end)
 
 registerCommand("ui", "Toggle console visibility.", function(args)
@@ -517,8 +496,74 @@ registerCommand("ui", "Toggle console visibility.", function(args)
     status.Text = console.Visible and "Console visible." or "Console hidden."
 end)
 
--- Chat listener
+-- extra simple commands to fill list
+local function simpleCmd(name, desc)
+    registerCommand(name, desc, function()
+        status.Text = desc
+    end)
+end
+
+simpleCmd("ping", "Ping check.")
+simpleCmd("version", "Dev console v1.0.")
+simpleCmd("about", "Vaporwave dev console.")
+simpleCmd("credits", "Made by you.")
+simpleCmd("clear", "Clear status.")
+commands["clear"].fn = function() status.Text = "" end
+
+simpleCmd("time", "Show time.")
+commands["time"].fn = function() status.Text = "Time: "..os.date("%H:%M:%S") end
+
+simpleCmd("date", "Show date.")
+commands["date"].fn = function() status.Text = "Date: "..os.date("%Y-%m-%d") end
+
+simpleCmd("pos", "Show position.")
+commands["pos"].fn = function()
+    local hrp = getHRP()
+    if not hrp then status.Text = "No HRP."; return end
+    local p = hrp.Position
+    status.Text = ("Pos: %.1f, %.1f, %.1f"):format(p.X, p.Y, p.Z)
+end
+
+simpleCmd("campos", "Show camera position.")
+commands["campos"].fn = function()
+    local cam = Workspace.CurrentCamera
+    if not cam then status.Text = "No camera."; return end
+    local p = cam.CFrame.Position
+    status.Text = ("Cam: %.1f, %.1f, %.1f"):format(p.X, p.Y, p.Z)
+end
+
+simpleCmd("slowmo", "Slowmo (visual placeholder).")
+simpleCmd("fastmo", "Fastmo (visual placeholder).")
+simpleCmd("hudon", "HUD on (placeholder).")
+simpleCmd("hudoff", "HUD off (placeholder).")
+simpleCmd("music", "Music toggle (placeholder).")
+simpleCmd("mute", "Mute (placeholder).")
+simpleCmd("unmute", "Unmute (placeholder).")
+simpleCmd("debugon", "Debug on (placeholder).")
+simpleCmd("debugoff", "Debug off (placeholder).")
+simpleCmd("grid", "Grid on (placeholder).")
+simpleCmd("nogrid", "Grid off (placeholder).")
+simpleCmd("lighton", "Light on (placeholder).")
+simpleCmd("lightoff", "Light off (placeholder).")
+simpleCmd("outline", "Outline on (placeholder).")
+simpleCmd("nooutline", "Outline off (placeholder).")
+simpleCmd("fogon", "Fog on (placeholder).")
+simpleCmd("fogoff", "Fog off (placeholder).")
+simpleCmd("camlock", "Camera lock (placeholder).")
+simpleCmd("camfree", "Camera free (placeholder).")
+simpleCmd("build", "Build mode (placeholder).")
+simpleCmd("nobuild", "Exit build mode (placeholder).")
+simpleCmd("safe", "Safe mode (placeholder).")
+simpleCmd("echo", "Echo text.")
+commands["echo"].fn = function(args)
+    status.Text = "Echo: "..table.concat(args, " ")
+end
+
+----------------------------------------------------------------
+-- CHAT LISTENER
+----------------------------------------------------------------
 local function handleChat(msg)
+    if not unlocked then return end
     if type(msg) ~= "string" then return end
     if msg:sub(1,1) ~= "!" then return end
     local parts = {}
@@ -541,14 +586,3 @@ local function handleChat(msg)
 end
 
 LP.Chatted:Connect(handleChat)
-
--- Initial UI setup
-console.BackgroundColor3 = theme.BG
-stroke.Color = theme.Accent2
-title.TextColor3 = theme.Text
-status.TextColor3 = theme.Text
-
--- Initial help population
-populateHelp()
-status.Text = "Vaporwave console loaded. Type !help."
-toast("Vaporwave console ready.")
