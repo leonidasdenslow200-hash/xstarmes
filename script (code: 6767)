@@ -1,4 +1,4 @@
--- VAPORWAVE DEV CONSOLE WITH PASSWORD + BIG CMD LIST
+-- VAPORWAVE DEV CONSOLE (ONE SCRIPT)
 -- LocalScript in StarterPlayerScripts
 
 local Players = game:GetService("Players")
@@ -6,6 +6,7 @@ local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local TS = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
 local LP = Players.LocalPlayer
 local PG = LP:WaitForChild("PlayerGui")
@@ -363,6 +364,23 @@ local function refreshCmdsList(commands)
 end
 
 ----------------------------------------------------------------
+-- COMMAND BAR (ATTACHED TO CONSOLE, TOGGLED BY ;)
+----------------------------------------------------------------
+local cmdBar = Instance.new("TextBox")
+cmdBar.Size = UDim2.fromScale(0.96, 0.18)
+cmdBar.Position = UDim2.fromScale(0.02, 0.80)
+cmdBar.BackgroundColor3 = theme.BG
+cmdBar.BackgroundTransparency = 0.2
+cmdBar.Text = ""
+cmdBar.PlaceholderText = "Type a command (e.g. !cmds) and press Enter..."
+cmdBar.Font = Enum.Font.Code
+cmdBar.TextScaled = true
+cmdBar.TextColor3 = theme.Text
+cmdBar.Visible = false
+cmdBar.Parent = console
+Instance.new("UICorner", cmdBar).CornerRadius = UDim.new(0, 8)
+
+----------------------------------------------------------------
 -- COMMAND SYSTEM
 ----------------------------------------------------------------
 local commands = {}
@@ -496,7 +514,42 @@ registerCommand("ui", "Toggle console visibility.", function(args)
     status.Text = console.Visible and "Console visible." or "Console hidden."
 end)
 
--- extra simple commands to fill list
+-- removebarriers
+registerCommand("removebarriers", "Lets you walk through any model/part/asset except the ones you're standing on!", function(args)
+    local hrp = getHRP()
+    if not hrp then 
+        status.Text = "No character."
+        return 
+    end
+
+    local ignore = hrp
+
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj ~= ignore then
+            obj.CanCollide = false
+        end
+    end
+
+    status.Text = "Barriers removed."
+    toast("Barriers removed.")
+end)
+
+-- spawnmarker (visible to everyone)
+registerCommand("spawnmarker", "Creates a visible marker in Workspace.", function(args)
+    local hrp = getHRP()
+    if not hrp then status.Text = "No HRP."; return end
+    local p = Instance.new("Part")
+    p.Size = Vector3.new(2,2,2)
+    p.Color = theme.Accent
+    p.Anchored = true
+    p.Position = hrp.Position + Vector3.new(0,5,0)
+    p.Name = "DevMarker"
+    p.Parent = workspace
+    status.Text = "Marker spawned."
+    toast("Marker visible to all players.")
+end)
+
+-- extra simple commands
 local function simpleCmd(name, desc)
     registerCommand(name, desc, function()
         status.Text = desc
@@ -532,40 +585,56 @@ commands["campos"].fn = function()
     status.Text = ("Cam: %.1f, %.1f, %.1f"):format(p.X, p.Y, p.Z)
 end
 
-simpleCmd("slowmo", "Slowmo (visual placeholder).")
-simpleCmd("fastmo", "Fastmo (visual placeholder).")
-simpleCmd("hudon", "HUD on (placeholder).")
-simpleCmd("hudoff", "HUD off (placeholder).")
-simpleCmd("music", "Music toggle (placeholder).")
-simpleCmd("mute", "Mute (placeholder).")
-simpleCmd("unmute", "Unmute (placeholder).")
-simpleCmd("debugon", "Debug on (placeholder).")
-simpleCmd("debugoff", "Debug off (placeholder).")
-simpleCmd("grid", "Grid on (placeholder).")
-simpleCmd("nogrid", "Grid off (placeholder).")
-simpleCmd("lighton", "Light on (placeholder).")
-simpleCmd("lightoff", "Light off (placeholder).")
-simpleCmd("outline", "Outline on (placeholder).")
-simpleCmd("nooutline", "Outline off (placeholder).")
-simpleCmd("fogon", "Fog on (placeholder).")
-simpleCmd("fogoff", "Fog off (placeholder).")
-simpleCmd("camlock", "Camera lock (placeholder).")
-simpleCmd("camfree", "Camera free (placeholder).")
-simpleCmd("build", "Build mode (placeholder).")
-simpleCmd("nobuild", "Exit build mode (placeholder).")
-simpleCmd("safe", "Safe mode (placeholder).")
-simpleCmd("echo", "Echo text.")
-commands["echo"].fn = function(args)
-    status.Text = "Echo: "..table.concat(args, " ")
+simpleCmd("lighton", "Increase global brightness.")
+commands["lighton"].fn = function()
+    Lighting.Brightness = 3
+    status.Text = "Lighting increased."
 end
 
+simpleCmd("lightoff", "Reset global brightness.")
+commands["lightoff"].fn = function()
+    Lighting.Brightness = 1
+    status.Text = "Lighting reset."
+end
+
+simpleCmd("spawnlight", "Spawn a visible light orb.")
+commands["spawnlight"].fn = function()
+    local hrp = getHRP()
+    if not hrp then status.Text = "No HRP."; return end
+    local p = Instance.new("Part")
+    p.Shape = Enum.PartType.Ball
+    p.Size = Vector3.new(2,2,2)
+    p.Color = Color3.fromRGB(120,200,255)
+    p.Anchored = true
+    p.Position = hrp.Position + Vector3.new(0,6,0)
+    local light = Instance.new("PointLight", p)
+    light.Brightness = 5
+    light.Range = 15
+    p.Parent = workspace
+    status.Text = "Light orb spawned."
+end
+
+simpleCmd("slowmo", "Slowmo (placeholder).")
+simpleCmd("fastmo", "Fastmo (placeholder).")
+simpleCmd("hudon", "HUD on (placeholder).")
+simpleCmd("hudoff", "HUD off (placeholder).")
+simpleCmd("debugon", "Debug on (placeholder).")
+simpleCmd("debugoff", "Debug off (placeholder).")
+simpleCmd("build", "Build mode (placeholder).")
+simpleCmd("nobuild", "Exit build mode (placeholder).")
+
+registerCommand("echo", "Echo text.", function(args)
+    status.Text = "Echo: "..table.concat(args, " ")
+end)
+
 ----------------------------------------------------------------
--- CHAT LISTENER
+-- COMMAND EXECUTION (CHAT + CMD BAR USE SAME FUNCTION)
 ----------------------------------------------------------------
-local function handleChat(msg)
+local function runCommandText(msg)
     if not unlocked then return end
     if type(msg) ~= "string" then return end
     if msg:sub(1,1) ~= "!" then return end
+
     local parts = {}
     for w in msg:gmatch("%S+") do
         table.insert(parts, w)
@@ -585,4 +654,26 @@ local function handleChat(msg)
     end
 end
 
-LP.Chatted:Connect(handleChat)
+-- Chat listener
+LP.Chatted:Connect(runCommandText)
+
+-- Command bar input
+cmdBar.FocusLost:Connect(function(enterPressed)
+    if not enterPressed then return end
+    local text = cmdBar.Text
+    cmdBar.Text = ""
+    runCommandText(text)
+end)
+
+-- Toggle command bar with ;
+UIS.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.Semicolon then
+        if console.Visible then
+            cmdBar.Visible = not cmdBar.Visible
+            if cmdBar.Visible then
+                cmdBar:CaptureFocus()
+            end
+        end
+    end
+end)
